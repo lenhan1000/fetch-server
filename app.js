@@ -2,6 +2,7 @@ var express = require("express");
 var bodyParser = require('body-parser');
 var app = express();
 var cookieParser = require("cookie-parser");
+var compression = require('compression');
 var logger = require('morgan');
 var mongoose = require('mongoose');
 var User = require('./models/User');
@@ -16,15 +17,16 @@ app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({'extended':'false'}));
 app.use(cookieParser());
-
+app.use(compression());
 app.use('/', index);
 app.use('/users', users);
 
 //Set up MongoDB
-mongoose.connect('mongodb://localhost/fetch-server')
+mongoose.Promise = global.Promise;
+var db = 'mongodb://localhost/fetch-server'
+mongoose.connect(db)
 	.then(() =>  console.log('connection successful'))
   .catch((err) => console.error(err));
-mongoose.Promise = global.Promise;
 var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 db.once('open', () => {
@@ -45,8 +47,7 @@ app.use(function(err, req, res, next) {
 
   // render the error page
   res.status(err.status || 500);
-  res.render('error');
+	res.send(err.message);
 });
-
 
 module.exports = app;
