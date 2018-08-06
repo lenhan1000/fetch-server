@@ -1,6 +1,7 @@
 var express = require("express");
 var bodyParser = require('body-parser');
 var app = express();
+var helmet = require('helmet')
 var cookieParser = require("cookie-parser");
 var compress = require("compression")
 var logger = require('morgan');
@@ -29,6 +30,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({'extended':'false'}));
 app.use(cookieParser());
 app.use(compress());
+app.use(helmet())
 app.use(passport.initialize());
 require('./config/passport.js')(passport);
 app.use('/', index);
