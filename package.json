@@ -4,6 +4,7 @@
   "description": "Fetch node js back end application",
   "main": "server.js",
   "scripts": {
+    "start" : "node ./bin/www_cluster",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon ./bin/www"
   },
