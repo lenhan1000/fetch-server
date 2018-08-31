@@ -48,17 +48,19 @@ UserSchema.methods.verifyPassword = async function(password){
   return bcrypt.compareSync(password, this.local.password);
 }
 
-UserSchema.methods.removePassword = async function(){
-  this.local.password = undefined;
-  return this;
-}
-
 UserSchema.methods.sign = async function(secret){
+  this.info = undefined
   return await jwt.sign(this.toObject(), secret)
 }
 
 UserSchema.statics.getInfo = async function(token){
-  return await jwt.decode(token).info;
+  let id = await jwt.decode(token)._id
+  user = await this.findById(id)
+  return user.info
+}
+
+UserSchema.statics.getIdFromToken = async function(token){
+  return await jwt.decode(token)._id;
 }
 
 UserSchema.statics.create = async function(info) {
