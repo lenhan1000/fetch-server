@@ -39,10 +39,10 @@ module.exports = passport => {
   });
 
   //UPDATE A USER
-  router.put('/info', passport.authenticate('jwt', {session:false}),
+  router.put('/update/info', passport.authenticate('jwt', {session:false}),
   async (req, res, next) => {
     let id  = await User.getIdFromToken(req.headers.authorization.substring(4)).catch(next)
-    await User.findByIdAndUpdate(id, {$set: {"UpdateAt": new Date()}}).catch(next)
+    await User.findByIdAndUpdate(id, {$set: {"updateAt": new Date()}}).catch(next)
     await User.findByIdAndUpdate(id, req.body)
       .then(user => res.json({success: true, msg: 'Information is updated'}))
       .catch(next)  });
