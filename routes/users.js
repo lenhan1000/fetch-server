@@ -17,7 +17,7 @@ module.exports = passport => {
   async (req, res, next) => {
     let info = await User.getInfo(req.headers.authorization.substring(4))
                       .catch(next);
-    res.json({"success":true, "message":info})
+    res.json({success:true, msg: info})
   });
 
   //GET USER BY ID
@@ -41,11 +41,13 @@ module.exports = passport => {
   //UPDATE A USER
   router.put('/update/info', passport.authenticate('jwt', {session:false}),
   async (req, res, next) => {
+    console.log(req.body)
     let id  = await User.getIdFromToken(req.headers.authorization.substring(4)).catch(next)
-    await User.findByIdAndUpdate(id, {$set: {"updateAt": new Date()}}).catch(next)
-    await User.findByIdAndUpdate(id, req.body)
+    await User.findByIdAndUpdate(id, req.body).catch(next);
+    await User.findByIdAndUpdate(id, {$set: {"updateAt": new Date()}})
       .then(user => res.json({success: true, msg: 'Information is updated'}))
       .catch(next)  });
+
 
   //DELETE A USER
   router.delete('/:id', passport.authenticate('jwt', {session:false}),

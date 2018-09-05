@@ -22,8 +22,8 @@ var UserSchema = new mongoose.Schema({
   info    :{
     displayName: { type: String },
     address: { type: String },
-    country: { type: String },
-    state: { type: String },
+    country: { type: Map, of: String, default: {}},
+    state: { type: Map, of: String, default: {}},
     city: { type: String },
     zipCode: { type: String },
     countryCode: { type: String },
