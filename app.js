@@ -13,6 +13,7 @@ var config = require('./config/database');
 
 var index= require('./routes/index');
 var users = require('./routes/users')(passport);
+var pets = require('./routes/pets')(passport);
 
 //Set up MongoDB
 mongoose.Promise = global.Promise;
@@ -35,6 +36,7 @@ app.use(passport.initialize());
 require('./config/passport.js')(passport);
 app.use('/', index);
 app.use('/users', users);
+app.use('/pets', pets);
 
 //CORS-ENABLE
 app.use(function(req, res, next) {
@@ -56,9 +58,8 @@ app.use(function(err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
-
   // render the error page
-  // res.status(err.status || 500);
+  res.status(err.status || 500);
 	// res.send(err.message);
 	res.json({success:false, msg: err.message})
 });

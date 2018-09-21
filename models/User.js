@@ -1,5 +1,6 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
+var Pet = require("./Pet");
 var bcrypt = require('bcrypt');
 var jwt = require('jsonwebtoken');
 
@@ -7,7 +8,7 @@ var jwt = require('jsonwebtoken');
 var saltRounds = 10;
 
 var UserSchema = new mongoose.Schema({
-  local: {
+  local :{
     email: {
       type: String,
       unique: true,
@@ -30,8 +31,22 @@ var UserSchema = new mongoose.Schema({
     mobilePhone: { type: String },
     carrier: { type: String },
   },
-  updateAt: { type: Date, default: Date.now },
-});
+  pets: [Pet.schema],
+  instances: [{
+    instanceId: Number,
+    brand: String,
+    version: Number,
+  }],
+  updateAt :{ type: Date, default: Date.now },
+},{
+  toJSON: {
+    transform: function(doc, ret){
+      delete ret._id
+      delete ret.updateAt
+    }
+  }
+}
+);
 
 UserSchema.pre('save', function(next) {
   var user = this;
@@ -44,30 +59,60 @@ UserSchema.pre('save', function(next) {
   }else{ next() }
 })
 
-UserSchema.methods.verifyPassword = async function(password){
-  return bcrypt.compareSync(password, this.local.password);
+UserSchema.methods.verifyPassword =
+async function(password){
+  return bcrypt.compareSync(
+    password, this.local.password
+  )
 }
 
-UserSchema.methods.sign = async function(secret){
+UserSchema.methods.sign =
+async function(secret){
   this.info = undefined
   return await jwt.sign(this.toObject(), secret)
 }
 
-UserSchema.statics.getInfo = async function(token){
+UserSchema.statics.getInfo =
+async function(token){
   let id = await jwt.decode(token)._id
   user = await this.findById(id)
   return user.info
 }
 
-UserSchema.statics.getIdFromToken = async function(token){
+UserSchema.statics.addPet =
+async function(token, info){
+  let id  = await this.getIdFromToken(token)
+  let p;
+  await Pet.create(info)
+  .then(pet => {
+    if (!pet) return null
+    else p = pet
+  })
+  await this.findByIdAndUpdate(
+    id,
+    {$push: {"pets": p}},
+    {safe: true, upsert: true}
+  ).then(user => {
+    if (!user) return null
+  })
+  return await this.findByIdAndUpdate(
+    id,
+    {$set: {"updateAt": new Date()}}
+  )
+
+}
+
+UserSchema.statics.getIdFromToken =
+async function(token){
   return await jwt.decode(token)._id;
 }
 
-UserSchema.statics.create = async function(info) {
+UserSchema.statics.create =
+async function(info) {
   let user = await this.findOne({
       'local.email': info.email
     })
-  if (user) return false;
+  if (user) return null;
   else{
     user = new this();
     user.local.email = info.email;
@@ -81,12 +126,44 @@ UserSchema.statics.create = async function(info) {
     user.info.countryCode = info.countryCode;
     user.info.mobilePhone = info.mobilePhone;
     user.info.carrier = info.carrier;
-    return user.save()
+    user.pet = []
+    return await user.save()
   }
 }
 
-UserSchema.statics.findByEmail = async function(email){
+UserSchema.statics.findByEmail =
+async function(email){
    return await this.findOne({'local.email':email})
+}
+
+//Child schema methods
+UserSchema.statics.findPets =
+async function(token){
+  let user;
+  let id = await this.getIdFromToken(token)
+  await this.findById(id)
+    .then(u => {
+      if (!u) return null
+      else user = u
+    })
+  return await this.sanitizePets(user.pets)
+}
+
+UserSchema.statics.sanitizePets =
+async function(pets){
+  return pets
+}
+
+UserSchema.statics.saveUserInstanceToken =
+async function(token, info){
+  let user;
+  let id = await this.getIdFromToken(token)
+  await this.findById(id)
+    .then(u => {
+       if (!u) return null
+       else  user = u
+    })
+
 }
 
 module.exports = mongoose.model('User', UserSchema);
