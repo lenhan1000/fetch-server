@@ -2,6 +2,13 @@ var express = require('express');
 var User = require("../models/User");
 var config = require('../config/database');
 var router = express.Router();
+var FCM = require('fcm-node');
+var serverKey = require('../config/privatekey.json')
+var fcm = new FCM(serverKey)
+
+var util = require("util")
+
+var sendFCM = util.promisify(fcm.send);
 
 module.exports = passport => {
   //GET ALL USERS
@@ -41,14 +48,14 @@ module.exports = passport => {
     }).catch(next);
   });
 
-  //GET USER BY ID
-  router.get('/:id',
-  passport.authenticate('jwt', {session:false}),
-  async (req, res, next) => {
-    await User.findById(req.params.id)
-      .then(user => res.json(users))
-      .catch(next)
-  });
+  // //GET USER BY ID
+  // router.get('/:id',
+  // passport.authenticate('jwt', {session:false}),
+  // async (req, res, next) => {
+  //   await User.findById(req.params.id)
+  //     .then(user => res.json(users))
+  //     .catch(next)
+  // });
 
   //CREATE A USER
   router.post('/', async (req, res, next) => {
@@ -115,12 +122,43 @@ module.exports = passport => {
   })
 
   router.post('/instance-token',
+  passport.authenticate('jwt', {session:false}),
   async (req, res, next) => {
     await User.saveUserInstanceToken(
       req.headers.authorization.substring(4),
       req.body
-    )
+    ).then(user =>{
+      if (!user) res.json({success: false, msg:"Bad"})
+      else res.json({sucess:true, msg:"Good"})
+    }).catch(next)
   })
 
+  router.get('/test-fcm',
+  passport.authenticate('jwt', {session:false}),
+  async (req, res, next) => {
+    let id = await User.getIdFromToken(
+      req.headers.authorization.substring(4)
+    ).catch(next)
+    let user;
+    await User.findById(id)
+    .then(u => {user = u})
+    .catch(next)
+    for (var i= 0; i < user.instances.length; i++){
+      console.log(user.instances[i].instanceId)
+      let msg = {
+        to: user.instances[i].instanceId,
+
+        data: {
+          success: "true",
+          msg: "NICE"
+        }
+      }
+      await sendFCM(msg)
+      .then(response => {
+          res.json({msg: response})
+      })
+      .catch(next)
+    }
+  })
   return router;
 }

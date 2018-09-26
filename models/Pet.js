@@ -43,8 +43,7 @@ async function(info){
   pet.info.personality = info.personality
   pet.info.gender = info.gender
   pet.info.spayed = info.spayed
-  pet.info.birth = new Date(info.birth)
-  return pet;
+  await pet.save();
+  return pet._id
 }
-
 module.exports = mongoose.model('Pet', PetSchema);

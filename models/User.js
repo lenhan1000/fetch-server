@@ -31,11 +31,29 @@ var UserSchema = new mongoose.Schema({
     mobilePhone: { type: String },
     carrier: { type: String },
   },
-  pets: [Pet.schema],
+  pets: [{
+    id:{
+      type: Schema.Types.ObjectId,
+      ref: "Pet"
+    },
+    name:{type: String},
+    type:{type: String},
+    relationship:{type:String}
+  }],
   instances: [{
-    instanceId: Number,
+    instanceId: String,
     brand: String,
-    version: Number,
+    version: String,
+    versionNumb: Number,
+    bootloader: String,
+    board: String,
+    device: String,
+    display: String,
+    fingerprint: String,
+    hardware: String,
+    manufacturer: String,
+    model: String,
+    product: String,
   }],
   updateAt :{ type: Date, default: Date.now },
 },{
@@ -84,9 +102,13 @@ async function(token, info){
   let id  = await this.getIdFromToken(token)
   let p;
   await Pet.create(info)
-  .then(pet => {
-    if (!pet) return null
-    else p = pet
+  .then(petId => {
+    if (!petId) return null
+    else p = {
+      id: petId,
+      name: info.name,
+      type: info.type,
+    }
   })
   await this.findByIdAndUpdate(
     id,
@@ -161,9 +183,27 @@ async function(token, info){
   await this.findById(id)
     .then(u => {
        if (!u) return null
-       else  user = u
     })
-
+  let old = info.oldInstanceId
+  await this.update(
+    {_id: id},
+    { $pull: {instances: {instanceId: old}}},
+    {safe: true}
+  ).then(u => {
+       if (!u) return null
+    })
+  delete info.oldInstanceId
+  await this.update(
+    {_id: id},
+    {$push: {"instances": info}},
+    {safe: true, upsert: true}
+  ).then(u => {
+    if (!u) return null
+  })
+  return await this.findByIdAndUpdate(
+    id,
+    {$set: {"updateAt": new Date()}}
+  )
 }
 
 module.exports = mongoose.model('User', UserSchema);
