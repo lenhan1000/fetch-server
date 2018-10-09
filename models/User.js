@@ -32,16 +32,24 @@ var UserSchema = new mongoose.Schema({
     carrier: { type: String },
   },
   pets: [{
+    _id: false,
     id:{
       type: Schema.Types.ObjectId,
-      ref: "Pet"
+      ref: "Pet",
+      unique: true,
+      required: true
     },
     name:{type: String},
     type:{type: String},
     relationship:{type:String}
   }],
   instances: [{
-    instanceId: String,
+    _id: false,
+    instanceId: {
+      type: String,
+      unique: true,
+      required: true
+    },
     brand: String,
     version: String,
     versionNumb: Number,
@@ -55,7 +63,18 @@ var UserSchema = new mongoose.Schema({
     model: String,
     product: String,
   }],
-  updateAt :{ type: Date, default: Date.now },
+  lastLoc :{
+    lat: {type: Number},
+    long: {type: Number}
+  },
+  locHist : [{
+    _id:false,
+    date :{type: Date},
+    lat :{type: Number},
+    long :{type: Number}
+  }],
+  lastAccess :{ type: Date, default: Date.now },
+  updateAt :{ type: Date, default: Date.now},
 },{
   toJSON: {
     transform: function(doc, ret){
@@ -86,8 +105,14 @@ async function(password){
 
 UserSchema.methods.sign =
 async function(secret){
-  this.info = undefined
-  return await jwt.sign(this.toObject(), secret)
+  signInfo = {_id: this._id}
+  return await jwt.sign(signInfo, secret)
+}
+
+UserSchema.statics.findByToken =
+async function(token){
+  let id = await this.getIdFromToken(token)
+  return await this.findById(id)
 }
 
 UserSchema.statics.getInfo =
@@ -108,6 +133,7 @@ async function(token, info){
       id: petId,
       name: info.name,
       type: info.type,
+      relationship: ""
     }
   })
   await this.findByIdAndUpdate(
@@ -149,6 +175,7 @@ async function(info) {
     user.info.mobilePhone = info.mobilePhone;
     user.info.carrier = info.carrier;
     user.pet = []
+    user.lastLock = []
     return await user.save()
   }
 }
@@ -205,5 +232,24 @@ async function(token, info){
     {$set: {"updateAt": new Date()}}
   )
 }
+
+UserSchema.statics.saveDateLoc =
+async function(token, info){
+  let id = await this.getIdFromToken(token)
+  date = new Date(info.date)
+  return await this.update(
+    {_id: id, 'locHist.date' : {"$ne": date}},
+    {$set: {lastAccess: date,
+      lastLoc: {lat: info.lat, long: info.long}},
+      $push: {locHist: {
+        date: date,
+        lat: info.lat,
+        long: info.long
+      }}
+    }
+  )
+}
+
+
 
 module.exports = mongoose.model('User', UserSchema);

@@ -14,7 +14,6 @@ module.exports = passport => {
               return done(err, false);
           }
           if (user) {
-              user.info = undefined;
               done(null, user);
           } else {
               done(null, false);

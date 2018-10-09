@@ -160,5 +160,26 @@ module.exports = passport => {
       .catch(next)
     }
   })
+
+  router.get('/count',
+  async (req, res, next) => {
+    await User.countDocuments()
+    .then(c => {
+      res.json({success:true, msg: c})
+    })
+    .catch(next)
+  })
+
+  router.post('/loc-update',
+  passport.authenticate('jwt', {session: false}),
+  async (req, res, next) =>{
+    await User.saveDateLoc(
+      req.headers.authorization.substring(4),
+      req.body
+    ).catch(next)
+    res.json({success: true, msg: "Update Succeed"})
+  })
+
   return router;
+
 }

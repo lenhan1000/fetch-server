@@ -1,7 +1,9 @@
 var express = require("express");
 var bodyParser = require('body-parser');
 var app = express();
-var helmet = require('helmet')
+var helmet = require('helmet');
+var httpProxy = require('http-proxy');
+// var proxy = httpProxy.createProxyServer({});
 var cookieParser = require("cookie-parser");
 var compress = require("compression")
 var logger = require('morgan');
@@ -24,6 +26,13 @@ var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 db.once('open', () => {
 });
+//
+// function appProxy(host, port){
+// 	return function(req, res, next){
+// 		proxy.proxyRequest(req, res, {host:host, port:port});
+// 	}
+// }
+// app.use(appProxy("www.google.com", 80));
 
 //Set up express
 app.use(logger('dev'));
@@ -34,16 +43,19 @@ app.use(compress());
 app.use(helmet())
 app.use(passport.initialize());
 require('./config/passport.js')(passport);
-app.use('/', index);
-app.use('/users', users);
-app.use('/pets', pets);
 
 //CORS-ENABLE
 app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Origin", req.headers.origin);
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  next();
+	res.header("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+	res.header("Access-Control-Max-Age", 20);
+	next();
 });
+
+app.use('/', index);
+app.use('/users', users);
+app.use('/pets', pets);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
